@@ -1,86 +1,103 @@
-import { EXCUSE_FIELD_MAP, HABITS } from "./data";
-
-export async function fetchHabits(iso) {
+export async function fetchCustomHabits() {
   try {
-    const res = await fetch(`/habitTracker/${iso}`);
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch {
-    console.info("Using local dashboard state");
-  }
-  return null;
-}
-
-export async function saveHabits(iso, state) {
-  const body = { date: iso, ...state };
-  try {
-    const r = await fetch(`/habitTrackerUpdate/${iso}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (r.status === 404) {
-      await fetch("/habitTracker", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-    }
-  } catch {
-    console.info("Database unavailable; state remains in this session.");
-  }
-}
-
-export async function fetchHabitStats(iso) {
-  try {
-    const res = await fetch(`/habitStats/${iso}`);
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch {
-    console.info("Could not fetch habit stats");
-  }
-  return null;
-}
-
-export async function fetchAllHabits() {
-  try {
-    const res = await fetch("/habitTrackerAll");
+    const res = await fetch("/customHabits");
     if (res.ok) return await res.json();
   } catch {
-    console.info("Could not fetch habit records");
+    console.info("Could not fetch custom habits");
   }
   return [];
 }
 
-export async function fetchAllExcuses() {
+export async function createCustomHabit(data) {
   try {
-    const res = await fetch("/excuseAll");
-    if (res.ok) return await res.json();
-  } catch {
-    console.info("Could not fetch excuse records");
-  }
-  return [];
-}
-
-export async function saveExcuse(iso, missedKey, text) {
-  const reasons = Object.fromEntries(
-    HABITS.map((h) => [`reasonOf${capitalize(h.key)}`, ""])
-  );
-  reasons[EXCUSE_FIELD_MAP[missedKey]] = text;
-
-  try {
-    await fetch("/excuse", {
+    const res = await fetch("/customHabits", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: iso, ...reasons }),
+      body: JSON.stringify(data),
+    });
+    if (res.ok) return await res.json();
+  } catch {
+    console.info("Could not create custom habit");
+  }
+  return null;
+}
+
+export async function updateCustomHabit(id, data) {
+  try {
+    const res = await fetch(`/customHabits/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) return await res.json();
+  } catch {
+    console.info("Could not update custom habit");
+  }
+  return null;
+}
+
+export async function deleteCustomHabit(id) {
+  try {
+    const res = await fetch(`/customHabits/${id}`, { method: "DELETE" });
+    if (res.ok) return await res.json();
+  } catch {
+    console.info("Could not delete custom habit");
+  }
+  return null;
+}
+
+export async function fetchCustomHabitData(iso) {
+  try {
+    const res = await fetch(`/customHabitData/${iso}`);
+    if (res.ok) return await res.json();
+  } catch {
+    console.info("Could not fetch custom habit data");
+  }
+  return {};
+}
+
+export async function saveCustomHabitData(iso, habitKey, completed, slotIndex = 0) {
+  try {
+    await fetch(`/customHabitData/${iso}/${habitKey}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed, slot_index: slotIndex }),
     });
   } catch {
-    // Silently ignore network errors
+    console.info("Could not save custom habit data");
   }
 }
 
-function capitalize(str) {
-  return str[0].toUpperCase() + str.slice(1);
+export async function fetchAllCustomHabitData() {
+  try {
+    const res = await fetch("/customHabitAll");
+    if (res.ok) return await res.json();
+  } catch {
+    console.info("Could not fetch all custom habit data");
+  }
+  return {};
+}
+
+export async function saveCustomHabitReason(iso, habitKey, slotIndex, reason) {
+  try {
+    const res = await fetch("/customHabitReason", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: iso, habit_key: habitKey, slot_index: slotIndex, reason }),
+    });
+    if (res.ok) return await res.json();
+  } catch {
+    console.info("Could not save reason");
+  }
+  return null;
+}
+
+export async function fetchAllReasons() {
+  try {
+    const res = await fetch("/customHabitReasonAll");
+    if (res.ok) return await res.json();
+  } catch {
+    console.info("Could not fetch reasons");
+  }
+  return [];
 }

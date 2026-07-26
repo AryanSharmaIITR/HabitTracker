@@ -1,141 +1,151 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { getTodayIso, getTodayDay } from "./data";
 import {
-  HABITS,
-  SCHEDULES,
-  getTodayIso,
-  getTodayDay,
-} from "./data";
-import { fetchHabits, saveHabits, saveExcuse, fetchHabitStats } from "./api";
+  fetchCustomHabits, fetchCustomHabitData, saveCustomHabitData, saveCustomHabitReason,
+} from "./api";
 import TopBar from "./components/TopBar";
 import Hero from "./components/Hero";
 import MetricCard from "./components/MetricCard";
-import Schedule from "./components/Schedule";
 import FocusCard from "./components/FocusCard";
 import QuoteCard from "./components/QuoteCard";
-import ExcuseModal from "./components/ExcuseModal";
-import HabitTable from "./components/HabitTable";
-import ExcuseTable from "./components/ExcuseTable";
+import ManageHabits from "./components/ManageHabits";
+import HabitRecord from "./components/HabitRecord";
+import ReasonTable from "./components/ReasonTable";
+import ReasonModal from "./components/ReasonModal";
 import "./App.css";
 
 const ISO = getTodayIso();
 const DAY = getTodayDay();
 
 export default function App() {
-  const [state, setState] = useState(() =>
-    Object.fromEntries(HABITS.map((h) => [h.key, false]))
-  );
-  const [modal, setModal] = useState({ open: false, key: null });
   const [activeTab, setActiveTab] = useState("dashboard");
-  const loadedRef = useRef(false);
+  const [customHabits, setCustomHabits] = useState([]);
+  const [customData, setCustomData] = useState({});
+  const customLoadedRef = useRef(false);
 
-  // Load saved state on mount
-  useEffect(() => {
-    fetchHabits(ISO).then((saved) => {
-      if (saved) {
-        setState((prev) => {
-          const next = { ...prev };
-          HABITS.forEach((h) => (next[h.key] = Boolean(saved[h.key])));
-          return next;
-        });
-      }
-      loadedRef.current = true;
+  const [modal, setModal] = useState({ open: false, habitKey: null, habitLabel: "", slotIndex: 0 });
+
+  const loadCustomHabits = useCallback(() => {
+    fetchCustomHabits().then((habits) => {
+      setCustomHabits(habits);
+      fetchCustomHabitData(ISO).then((data) => {
+        setCustomData(data);
+        customLoadedRef.current = true;
+      });
     });
   }, []);
 
-  // Persist state whenever it changes (only after initial load)
-  useEffect(() => {
-    if (loadedRef.current) saveHabits(ISO, state);
-  }, [state]);
+  useEffect(() => { loadCustomHabits(); }, [loadCustomHabits]);
 
-  const todaySchedule = useMemo(
-    () => SCHEDULES[DAY] || SCHEDULES.Monday,
-    []
-  );
+  const toggleCustomSlot = useCallback((habitKey, slotIndex) => {
+    setCustomData((prev) => {
+      const habitSlots = prev[habitKey] || {};
+      const wasCompleted = habitSlots[slotIndex];
 
-  const associatedKeys = useMemo(
-    () => new Set(todaySchedule.map((x) => x[2]).filter(Boolean)),
-    [todaySchedule]
-  );
+      if (wasCompleted) {
+        const habit = customHabits.find((h) => h.key === habitKey);
+        setModal({ open: true, habitKey, habitLabel: habit?.label || habitKey, slotIndex });
+        return prev;
+      }
 
-  const completed = useMemo(
-    () => [...associatedKeys].filter((k) => state[k]).length,
-    [associatedKeys, state]
-  );
+      saveCustomHabitData(ISO, habitKey, true, slotIndex);
+      return { ...prev, [habitKey]: { ...habitSlots, [slotIndex]: true } };
+    });
+  }, [customHabits]);
 
-  const allDone = completed === associatedKeys.size;
+  const handleReasonSubmit = useCallback(async (reason) => {
+    const { habitKey, slotIndex } = modal;
+    saveCustomHabitData(ISO, habitKey, false, slotIndex);
+    if (reason.trim()) {
+      await saveCustomHabitReason(ISO, habitKey, slotIndex, reason.trim());
+    }
+    setCustomData((prev) => {
+      const habitSlots = prev[habitKey] || {};
+      return { ...prev, [habitKey]: { ...habitSlots, [slotIndex]: false } };
+    });
+    setModal({ open: false, habitKey: null, habitLabel: "", slotIndex: 0 });
+  }, [modal]);
 
-  // Per-habit slot counts: how many times each habit appears in today's schedule
+  const todaySchedule = useMemo(() => {
+    const slots = [];
+    customHabits.forEach((h) => {
+      const daySchedules = (h.schedule || []).filter((s) => s.day_of_week === DAY);
+      daySchedules.forEach((s, idx) => {
+        const timeRange = `${s.start_time}\u2013${s.end_time}`;
+        slots.push({ time: timeRange, name: h.label, key: h.key, color: h.color, slotIndex: idx });
+      });
+    });
+    slots.sort((a, b) => a.time.localeCompare(b.time));
+    return slots;
+  }, [customHabits]);
+
   const habitSlotCounts = useMemo(() => {
     const counts = {};
-    HABITS.forEach((h) => (counts[h.key] = 0));
-    todaySchedule.forEach((slot) => {
-      if (slot[2] && counts[slot[2]] !== undefined) {
-        counts[slot[2]]++;
-      }
+    customHabits.forEach((h) => {
+      counts[h.key] = (h.schedule || []).filter((s) => s.day_of_week === DAY).length;
     });
     return counts;
-  }, [todaySchedule]);
+  }, [customHabits]);
 
-  const nextSlot = useMemo(
-    () => todaySchedule.find((x) => x[2] && !state[x[2]]) || todaySchedule[0],
-    [todaySchedule, state]
-  );
-
-  const toggleHabit = useCallback(
-    (key, force) => {
-      const next = force ?? !state[key];
-
-      // Unchecking -> open excuse modal
-      if (!next && state[key]) {
-        const label = HABITS.find((h) => h.key === key).label;
-        setModal({ open: true, key, label });
+  const completed = useMemo(() => {
+    let done = 0;
+    let total = 0;
+    customHabits.forEach((h) => {
+      const count = habitSlotCounts[h.key] || 0;
+      total += count;
+      const slots = customData[h.key] || {};
+      for (let i = 0; i < count; i++) {
+        if (slots[i]) done++;
       }
+    });
+    return { done, total };
+  }, [customHabits, habitSlotCounts, customData]);
 
-      setState((prev) => ({ ...prev, [key]: next }));
-    },
-    [state]
-  );
-
-  const closeModal = useCallback(() => {
-    setModal({ open: false, key: null, label: null });
-  }, []);
-
-  const submitExcuse = useCallback(
-    async (text) => {
-      await saveExcuse(ISO, modal.key, text);
-      closeModal();
-    },
-    [modal.key, closeModal]
-  );
+  const nextSlot = useMemo(() => {
+    return todaySchedule.find((s) => !(customData[s.key] || {})[s.slotIndex]) || todaySchedule[0] || null;
+  }, [todaySchedule, customData]);
 
   return (
     <main className="shell">
       <TopBar />
 
       <Hero
-        completed={completed}
-        total={associatedKeys.size}
-        allDone={allDone}
+        completed={completed.done}
+        total={completed.total}
+        allDone={completed.total > 0 && completed.done === completed.total}
       />
 
       <section className="metrics">
-        {HABITS.map((h) => {
+        {customHabits.map((h) => {
           const totalSlots = habitSlotCounts[h.key] || 0;
-          const doneSlots = state[h.key] ? totalSlots : 0;
+          let doneSlots = 0;
+          if (totalSlots > 0) {
+            const slots = customData[h.key] || {};
+            for (let i = 0; i < totalSlots; i++) {
+              if (slots[i]) doneSlots++;
+            }
+          }
           return (
             <MetricCard
               key={h.key}
-              habit={h}
-              done={state[h.key]}
+              habit={{ key: h.key, label: h.label, color: h.color }}
+              done={totalSlots > 0 && doneSlots === totalSlots}
               doneSlots={doneSlots}
               totalSlots={totalSlots}
-              onToggle={toggleHabit}
+              onToggle={() => {
+                const nextUnchecked = Array.from({ length: totalSlots }, (_, i) => i).find((i) => !(customData[h.key] || {})[i]);
+                if (nextUnchecked !== undefined) toggleCustomSlot(h.key, nextUnchecked);
+              }}
             />
           );
         })}
+        {customHabits.length === 0 && (
+          <p className="empty-msg" style={{ gridColumn: "1 / -1" }}>
+            No habits yet. Go to <strong>My Habits</strong> to create your first one.
+          </p>
+        )}
       </section>
 
-      {/* Tab navigation */}
       <div className="tab-bar">
         <button
           className={`tab-btn ${activeTab === "dashboard" ? "active" : ""}`}
@@ -144,14 +154,20 @@ export default function App() {
           Dashboard
         </button>
         <button
-          className={`tab-btn ${activeTab === "habits" ? "active" : ""}`}
-          onClick={() => setActiveTab("habits")}
+          className={`tab-btn ${activeTab === "myhabits" ? "active" : ""}`}
+          onClick={() => setActiveTab("myhabits")}
         >
-          Habit Tracker
+          My Habits
         </button>
         <button
-          className={`tab-btn ${activeTab === "excuses" ? "active" : ""}`}
-          onClick={() => setActiveTab("excuses")}
+          className={`tab-btn ${activeTab === "records" ? "active" : ""}`}
+          onClick={() => setActiveTab("records")}
+        >
+          Habit Record
+        </button>
+        <button
+          className={`tab-btn ${activeTab === "reasons" ? "active" : ""}`}
+          onClick={() => setActiveTab("reasons")}
         >
           Reasons
         </button>
@@ -166,60 +182,101 @@ export default function App() {
                 <h2>{DAY} Schedule</h2>
               </div>
               <div className="schedule-summary">
-                <span>{completed}</span>/{associatedKeys.size} done
+                <span>{completed.done}</span>/{completed.total} done
               </div>
             </div>
-            <Schedule
-              tasks={todaySchedule}
-              state={state}
-              onToggle={toggleHabit}
-            />
+            {todaySchedule.length > 0 ? (
+              <div className="schedule">
+                {todaySchedule.map((task) => {
+                  const isChecked = !!(customData[task.key] || {})[task.slotIndex];
+                  return (
+                    <label
+                      key={`${task.key}-${task.slotIndex}`}
+                      className={`task ${isChecked ? "completed" : ""}`}
+                    >
+                      <span className="task-time">{task.time}</span>
+                      <input
+                        type="checkbox"
+                        className="check"
+                        checked={isChecked}
+                        onChange={() => toggleCustomSlot(task.key, task.slotIndex)}
+                      />
+                      <span className="task-name">{task.name}</span>
+                      <span
+                        className="task-tag"
+                        style={{ background: task.color + "22", color: task.color, borderColor: task.color + "44" }}
+                      >
+                        {task.slotIndex + 1}/{habitSlotCounts[task.key]}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="empty-msg">No habits scheduled for {DAY}. Go to My Habits to set up your schedule.</p>
+            )}
           </section>
 
           <aside className="side-column">
-            <FocusCard
-              time={nextSlot[0]}
-              task={nextSlot[1]}
-              text={
-                nextSlot[2]
-                  ? "Your next commitment is waiting."
-                  : "One focused block at a time."
-              }
-            />
+            {nextSlot ? (
+              <FocusCard
+                time={nextSlot.time}
+                task={nextSlot.name}
+                text="Your next commitment is waiting."
+              />
+            ) : (
+              <FocusCard
+                time="--:--"
+                task="All done!"
+                text="Great work today. You've completed everything."
+              />
+            )}
             <QuoteCard />
           </aside>
         </section>
       )}
 
-      {activeTab === "habits" && (
+      {activeTab === "myhabits" && (
         <section className="data-card">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">DATABASE</p>
-              <h2>Habit Tracker Table</h2>
+              <p className="eyebrow">MANAGE</p>
+              <h2>My Habits</h2>
             </div>
           </div>
-          <HabitTable />
+          <ManageHabits onHabitsChanged={loadCustomHabits} />
         </section>
       )}
 
-      {activeTab === "excuses" && (
+      {activeTab === "records" && (
         <section className="data-card">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">DATABASE</p>
-              <h2>Reasons Table</h2>
+              <p className="eyebrow">DATA</p>
+              <h2>Habit Record</h2>
             </div>
           </div>
-          <ExcuseTable />
+          <HabitRecord />
         </section>
       )}
 
-      <ExcuseModal
+      {activeTab === "reasons" && (
+        <section className="data-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">DATA</p>
+              <h2>Reasons</h2>
+            </div>
+          </div>
+          <ReasonTable />
+        </section>
+      )}
+
+      <ReasonModal
         open={modal.open}
-        missedLabel={modal.label}
-        onClose={closeModal}
-        onSubmit={submitExcuse}
+        habitLabel={modal.habitLabel}
+        onClose={() => setModal({ open: false, habitKey: null, habitLabel: "", slotIndex: 0 })}
+        onSubmit={handleReasonSubmit}
       />
     </main>
   );

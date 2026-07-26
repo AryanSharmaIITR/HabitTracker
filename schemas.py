@@ -1,20 +1,30 @@
 from datetime import date
 from pydantic import BaseModel
 
-class HabitTrackerCreate(BaseModel):
-    date: date
-    gym: bool = False
-    wakeUp: bool = False
-    gate: bool = False
-    aimlRevision: bool = False
-    upSkill: bool = False
-    codeForces: bool = False
+class ScheduleItem(BaseModel):
+    day_of_week: str
+    start_time: str
+    end_time: str
 
-class excuseCreate(BaseModel):
+class CustomHabitCreate(BaseModel):
+    key: str
+    label: str
+    color: str
+    sort_order: int = 0
+    schedule: list[ScheduleItem] = []
+
+class CustomHabitUpdate(BaseModel):
+    label: str | None = None
+    color: str | None = None
+    sort_order: int | None = None
+    schedule: list[ScheduleItem] | None = None
+
+class CustomHabitDataUpdate(BaseModel):
+    completed: bool
+    slot_index: int = 0
+
+class CustomHabitReasonCreate(BaseModel):
     date: date
-    reasonOfWakeUp: str
-    reasonOfGym: str
-    reasonOfGate: str
-    reasonOfAimlRevision: str
-    reasonOfUpSkill: str
-    reasonOfCodeForces: str
+    habit_key: str
+    slot_index: int = 0
+    reason: str = ""
