@@ -1,0 +1,718 @@
+/* ================================================================
+   HABIT FLOW – Stylesheet
+   ================================================================ */
+
+/* ── Custom properties ─────────────────────────────────────────── */
+
+:root {
+  --ink:     #e9eee9;
+  --muted:   #9ca79f;
+  --soft:    #2a322e;
+  --line:    #354139;
+  --paper:   #17211c;
+  --canvas:  #101714;
+  --lime:    #c8f34b;
+  --orange:  #ff9c32;
+  --pink:    #f37a82;
+  --teal:    #4fd1b3;
+}
+
+/* ── Reset & base ──────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: Manrope, sans-serif;
+}
+
+/* Subtle grid + radial glow overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 84% 0%, rgba(91, 129, 65, 0.18), transparent 27%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: auto, 32px 32px, 32px 32px;
+}
+
+/* ── Shell ─────────────────────────────────────────────────────── */
+
+.shell {
+  max-width: 1330px;
+  padding: 0 34px 55px;
+  margin: auto;
+  position: relative;
+}
+
+/* ── Top bar ───────────────────────────────────────────────────── */
+
+.topbar {
+  height: 86px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  font: 500 18px "DM Mono", monospace;
+  text-decoration: none;
+  color: var(--ink);
+  letter-spacing: -1px;
+}
+
+.brand span {
+  color: var(--lime);
+}
+
+.date-block {
+  margin-left: auto;
+  text-align: right;
+  margin-right: 20px;
+  line-height: 1.2;
+}
+
+.date-block span,
+.eyebrow {
+  display: block;
+  font: 500 10px "DM Mono", monospace;
+  color: var(--muted);
+  letter-spacing: 1.3px;
+}
+
+.date-block strong {
+  font-size: 12px;
+}
+
+.profile {
+  border: 1px solid #67776b;
+  background: #27352d;
+  color: var(--lime);
+  border-radius: 50%;
+  width: 37px;
+  height: 37px;
+  font-weight: 800;
+}
+
+/* ── Hero ──────────────────────────────────────────────────────── */
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 67px 0 38px;
+}
+
+.eyebrow {
+  color: #9aa79f;
+  margin: 0 0 9px;
+}
+
+h1, h2, h3, p {
+  margin-top: 0;
+}
+
+h1 {
+  font-size: clamp(42px, 5vw, 68px);
+  line-height: 0.98;
+  letter-spacing: -3px;
+  margin-bottom: 14px;
+}
+
+h1 span {
+  color: var(--lime);
+}
+
+.subhead {
+  color: var(--muted);
+  font-size: 15px;
+  margin: 0;
+}
+
+.hero-progress {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 11px 16px;
+  background: #17211c;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  min-width: 250px;
+}
+
+.mini-ring {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 4px solid var(--lime);
+  border-left-color: #344238;
+  border-radius: 50%;
+  font: 500 13px "DM Mono", monospace;
+}
+
+.hero-progress strong {
+  font-size: 12px;
+  display: block;
+}
+
+.hero-progress small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 3px;
+}
+
+/* ── Metric cards ──────────────────────────────────────────────── */
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 13px;
+  margin-bottom: 26px;
+}
+
+.metric {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 18px 13px 13px;
+  min-height: 185px;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric::after {
+  content: "";
+  position: absolute;
+  height: 3px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--accent);
+}
+
+.ring {
+  --value: 0;
+  --accent: var(--lime);
+  width: 98px;
+  height: 98px;
+  border-radius: 50%;
+  margin: auto;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.ring::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  background: var(--paper);
+  border-radius: 50%;
+}
+
+.ring-inner {
+  position: relative;
+  text-align: center;
+}
+
+.ring strong {
+  font: 500 21px "DM Mono", monospace;
+  display: block;
+}
+
+.ring small {
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.metric-label {
+  margin: 13px 0 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+.metric button {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.metric.done {
+  background: #1b2a20;
+}
+
+.metric.done .ring::before {
+  background: #1b2a20;
+}
+
+.metric .status {
+  font: 500 9px "DM Mono", monospace;
+  color: var(--muted);
+  text-align: center;
+  margin: 5px 0 0;
+}
+
+.metric.done .status {
+  color: var(--lime);
+}
+
+/* ── Content grid ──────────────────────────────────────────────── */
+
+.content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 270px;
+  gap: 26px;
+}
+
+.schedule-card,
+.focus-card,
+.quote-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+/* ── Schedule card ─────────────────────────────────────────────── */
+
+.schedule-card {
+  padding: 24px;
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 17px;
+}
+
+.section-heading h2 {
+  font-size: 21px;
+  letter-spacing: -0.7px;
+  margin: 0;
+}
+
+.schedule-summary {
+  font: 500 12px "DM Mono", monospace;
+  color: var(--muted);
+}
+
+.schedule-summary span:first-child {
+  color: var(--lime);
+}
+
+.schedule {
+  max-height: 530px;
+  overflow: auto;
+  padding-right: 5px;
+}
+
+/* ── Task rows ─────────────────────────────────────────────────── */
+
+.task {
+  display: grid;
+  grid-template-columns: 84px 24px 1fr auto;
+  gap: 13px;
+  align-items: center;
+  padding: 14px 3px;
+  border-bottom: 1px solid rgba(53, 65, 57, 0.72);
+}
+
+.task:last-child {
+  border: 0;
+}
+
+.task-time {
+  font: 500 10px "DM Mono", monospace;
+  color: var(--muted);
+}
+
+.check {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 1px solid #718277;
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+}
+
+.check:checked {
+  background: var(--lime);
+  border-color: var(--lime);
+}
+
+.check:checked::after {
+  content: "\2713";
+  color: #122015;
+  font-weight: 900;
+  font-size: 13px;
+  position: absolute;
+  left: 3px;
+  top: -1px;
+}
+
+.task-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.task.completed .task-name {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.task-tag {
+  font: 500 9px "DM Mono", monospace;
+  color: #83aa95;
+  background: #22352a;
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+/* ── Side column ───────────────────────────────────────────────── */
+
+.side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── Focus card ────────────────────────────────────────────────── */
+
+.focus-card {
+  padding: 23px;
+  background: linear-gradient(145deg, #223027, #18231d);
+}
+
+.focus-time {
+  font: 500 39px "DM Mono", monospace;
+  color: var(--lime);
+  letter-spacing: -3px;
+  margin: 25px 0 4px;
+}
+
+.focus-card h3 {
+  font-size: 17px;
+  margin-bottom: 7px;
+}
+
+.focus-card p {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.focus-rule {
+  height: 1px;
+  background: #526154;
+  margin: 23px 0 12px;
+}
+
+.focus-card small {
+  font: 500 9px "DM Mono", monospace;
+  letter-spacing: 0.8px;
+  color: #b7c7b9;
+}
+
+/* ── Quote card ────────────────────────────────────────────────── */
+
+.quote-card {
+  padding: 21px;
+  background: #1c211e;
+}
+
+.quote-card span {
+  font-size: 40px;
+  color: var(--orange);
+  height: 20px;
+  display: block;
+}
+
+.quote-card p {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 6px 0 0;
+  color: #c8d0ca;
+}
+
+/* ── Modal ─────────────────────────────────────────────────────── */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 8, 6, 0.75);
+  backdrop-filter: blur(5px);
+  display: none;
+  place-items: center;
+  padding: 20px;
+  z-index: 3;
+}
+
+.modal-backdrop.open {
+  display: grid;
+}
+
+.excuse-modal {
+  position: relative;
+  width: min(460px, 100%);
+  padding: 30px;
+  background: #1a241e;
+  border: 1px solid #536257;
+  border-radius: 14px;
+  box-shadow: 0 25px 80px #000;
+}
+
+.excuse-modal h2 {
+  font-size: 28px;
+  letter-spacing: -1.2px;
+  margin-bottom: 8px;
+}
+
+.excuse-modal p {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.excuse-modal textarea {
+  width: 100%;
+  min-height: 100px;
+  resize: vertical;
+  color: var(--ink);
+  font: 13px Manrope, sans-serif;
+  border: 1px solid #48574d;
+  background: #101713;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 14px 0 18px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.save-btn,
+.ghost-btn {
+  border: 0;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font: 700 11px Manrope, sans-serif;
+  cursor: pointer;
+}
+
+.save-btn {
+  background: var(--lime);
+  color: #172014;
+}
+
+.ghost-btn {
+  background: transparent;
+  color: var(--muted);
+}
+
+.close {
+  position: absolute;
+  right: 15px;
+  top: 11px;
+  color: var(--muted);
+  border: 0;
+  background: none;
+  font-size: 25px;
+  cursor: pointer;
+}
+
+/* ── Tab bar ───────────────────────────────────────────────────── */
+
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 26px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0;
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--muted);
+  font: 600 12px "DM Mono", monospace;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tab-btn:hover {
+  background: var(--soft);
+  color: var(--ink);
+}
+
+.tab-btn.active {
+  background: var(--paper);
+  color: var(--lime);
+  border-color: var(--line);
+}
+
+/* ── Data card (tables) ────────────────────────────────────────── */
+
+.data-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 26px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 17px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th {
+  font: 600 11px "DM Mono", monospace;
+  color: var(--muted);
+  letter-spacing: 0.8px;
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(53, 65, 57, 0.5);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.data-table tbody tr:hover {
+  background: rgba(200, 243, 75, 0.04);
+}
+
+.data-table td:first-child {
+  font: 500 12px "DM Mono", monospace;
+  color: var(--muted);
+}
+
+.table-empty {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ── Responsive: tablet ────────────────────────────────────────── */
+
+@media (max-width: 950px) {
+  .metrics {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .side-column {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .hero {
+    align-items: flex-start;
+    gap: 25px;
+  }
+}
+
+/* ── Responsive: mobile ────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .shell {
+    padding: 0 17px 30px;
+  }
+
+  .topbar {
+    height: 68px;
+  }
+
+  .date-block {
+    display: none;
+  }
+
+  .profile {
+    margin-left: auto;
+  }
+
+  .hero {
+    padding: 42px 0 25px;
+    display: block;
+  }
+
+  .hero-progress {
+    margin-top: 24px;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 9px;
+  }
+
+  .metric {
+    min-height: 164px;
+    padding-top: 14px;
+  }
+
+  .content-grid {
+    gap: 14px;
+  }
+
+  .schedule-card {
+    padding: 17px;
+  }
+
+  .task {
+    grid-template-columns: 65px 20px 1fr;
+  }
+
+  .task-tag {
+    display: none;
+  }
+
+  .side-column {
+    display: block;
+  }
+
+  .quote-card {
+    margin-top: 14px;
+  }
+
+  .focus-time {
+    margin-top: 15px;
+  }
+}
