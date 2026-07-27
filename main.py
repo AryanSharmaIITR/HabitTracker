@@ -1,15 +1,59 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from datetime import date, datetime, time
 from typing import Annotated
 import models
 import schemas
 from database import engine, SessionLocal
 from sqlalchemy.orm import Session
+from sqlalchemy import func, cast, Integer
 
-app = FastAPI()
+def _seed_today(db: Session):
+    today = date.today()
+    today_dt = datetime.combine(today, time.min)
+    day_name = today.strftime("%A")
+    schedules = (
+        db.query(models.CustomHabitSchedule)
+        .filter(models.CustomHabitSchedule.day_of_week == day_name)
+        .all()
+    )
+    existing = (
+        db.query(models.CustomHabitData)
+        .filter(models.CustomHabitData.date == today_dt)
+        .all()
+    )
+    existing_keys = {(r.habit_key, r.slot_index) for r in existing}
+    added = 0
+    for s in schedules:
+        if (s.habit_key, s.slot_order) not in existing_keys:
+            db.add(models.CustomHabitData(
+                date=today_dt,
+                habit_key=s.habit_key,
+                slot_index=s.slot_order,
+                completed=False,
+            ))
+            added += 1
+    if added:
+        db.commit()
+        print(f"Seeded {added} empty habit slot(s) for {today}.")
+    else:
+        print(f"All habit slots already recorded for {today}.")
+
+@asynccontextmanager
+async def lifespan(app):
+    models.Base.metadata.create_all(bind=engine)
+    print("Database tables initialized.")
+    db = SessionLocal()
+    try:
+        _seed_today(db)
+    finally:
+        db.close()
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,8 +62,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-models.Base.metadata.create_all(bind=engine)
 
 app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="react-assets")
 
@@ -35,9 +77,9 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def main():
-    return FileResponse("frontend/dist/index.html")
+    return FileResponse("frontend/dist/index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"})
 
 
 def _save_schedule(db, habit_key, schedule):
@@ -163,6 +205,26 @@ def get_all_custom_habit_data(db: db_dependency):
             result[date_str][r.habit_key] = {}
         result[date_str][r.habit_key][r.slot_index] = r.completed
     return result
+
+
+@app.get("/habitStats")
+def get_habit_stats(db: db_dependency):
+    rows = (
+        db.query(
+            models.CustomHabitData.habit_key,
+            func.sum(cast(models.CustomHabitData.completed, Integer)).label("completed_sum"),
+            func.count().label("entry_count"),
+        )
+        .group_by(models.CustomHabitData.habit_key)
+        .all()
+    )
+    stats = {
+        r.habit_key: {"done": int(r.completed_sum or 0), "total": r.entry_count}
+        for r in rows
+    }
+    for habit_key, s in stats.items():
+        print(f"[habitStats] {habit_key}: {s['done']}/{s['total']}")
+    return stats
 
 
 @app.post("/customHabitReason", status_code=status.HTTP_201_CREATED)

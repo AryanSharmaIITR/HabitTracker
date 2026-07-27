@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { getTodayIso, getTodayDay } from "./data";
 import {
-  fetchCustomHabits, fetchCustomHabitData, saveCustomHabitData, saveCustomHabitReason,
+  fetchCustomHabits, fetchCustomHabitData, fetchHabitStats,
+  saveCustomHabitData, saveCustomHabitReason,
 } from "./api";
 import TopBar from "./components/TopBar";
 import Hero from "./components/Hero";
@@ -21,6 +22,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [customHabits, setCustomHabits] = useState([]);
   const [customData, setCustomData] = useState({});
+  const [habitStats, setHabitStats] = useState({});
   const customLoadedRef = useRef(false);
 
   const [modal, setModal] = useState({ open: false, habitKey: null, habitLabel: "", slotIndex: 0 });
@@ -36,6 +38,16 @@ export default function App() {
   }, []);
 
   useEffect(() => { loadCustomHabits(); }, [loadCustomHabits]);
+
+  useEffect(() => {
+    fetchHabitStats().then(setHabitStats);
+  }, []);
+
+  useEffect(() => {
+    if (customLoadedRef.current) {
+      fetchHabitStats().then(setHabitStats);
+    }
+  }, [customData]);
 
   const toggleCustomSlot = useCallback((habitKey, slotIndex) => {
     setCustomData((prev) => {
@@ -102,7 +114,7 @@ export default function App() {
   }, [customHabits, habitSlotCounts, customData]);
 
   const nextSlot = useMemo(() => {
-    return todaySchedule.find((s) => !(customData[s.key] || {})[s.slotIndex]) || todaySchedule[0] || null;
+    return todaySchedule.find((s) => !(customData[s.key] || {})[s.slotIndex]) || null;
   }, [todaySchedule, customData]);
 
   return (
@@ -125,6 +137,7 @@ export default function App() {
               if (slots[i]) doneSlots++;
             }
           }
+          const at = habitStats[h.key] || { done: 0, total: 0 };
           return (
             <MetricCard
               key={h.key}
@@ -132,6 +145,8 @@ export default function App() {
               done={totalSlots > 0 && doneSlots === totalSlots}
               doneSlots={doneSlots}
               totalSlots={totalSlots}
+              allTimeDone={at.done}
+              allTimeTotal={at.total}
               onToggle={() => {
                 const nextUnchecked = Array.from({ length: totalSlots }, (_, i) => i).find((i) => !(customData[h.key] || {})[i]);
                 if (nextUnchecked !== undefined) toggleCustomSlot(h.key, nextUnchecked);

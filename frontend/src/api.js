@@ -78,6 +78,16 @@ export async function fetchAllCustomHabitData() {
   return {};
 }
 
+export async function fetchHabitStats() {
+  try {
+    const res = await fetch("/habitStats");
+    if (res.ok) return await res.json();
+  } catch {
+    console.info("Could not fetch habit stats");
+  }
+  return {};
+}
+
 export async function saveCustomHabitReason(iso, habitKey, slotIndex, reason) {
   try {
     const res = await fetch("/customHabitReason", {

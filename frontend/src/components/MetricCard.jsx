@@ -1,7 +1,6 @@
-export default function MetricCard({ habit, done, doneSlots, totalSlots, onToggle }) {
-  const fraction = totalSlots > 0 ? doneSlots / totalSlots : 0;
+export default function MetricCard({ habit, done, doneSlots, totalSlots, allTimeDone, allTimeTotal, onToggle }) {
+  const fraction = allTimeTotal > 0 ? allTimeDone / allTimeTotal : 0;
   const accentDeg = fraction * 360;
-  const redDeg = (1 - fraction) * 360;
 
   return (
     <article
@@ -15,12 +14,14 @@ export default function MetricCard({ habit, done, doneSlots, totalSlots, onToggl
         }}
       >
         <div className="ring-inner">
-          <strong>{doneSlots}/{totalSlots}</strong>
-          <small>DONE</small>
+          <strong>{allTimeDone}/{allTimeTotal}</strong>
+          <small>ALL TIME</small>
         </div>
       </div>
       <p className="metric-label">{habit.label}</p>
-      <p className="status">{done ? "COMPLETE" : "TAP TO CHECK IN"}</p>
+      <p className="status">
+        {done ? "COMPLETE TODAY" : totalSlots > 0 ? `${doneSlots}/${totalSlots} TODAY` : "NO SCHEDULE TODAY"}
+      </p>
       <button
         aria-label={`Mark ${habit.label} complete`}
         onClick={() => onToggle(habit.key)}
