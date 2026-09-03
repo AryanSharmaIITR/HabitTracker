@@ -1,8 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
 from datetime import date, datetime, time
 from typing import Annotated
 from pathlib import Path
@@ -71,10 +69,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_dist = Path(__file__).parent / "frontend" / "dist"
-if _dist.is_dir():
-    app.mount("/assets", StaticFiles(directory=str(_dist / "assets")), name="react-assets")
-
 
 def get_db():
     db = SessionLocal()
@@ -87,9 +81,9 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 
 
-@app.get("/", response_class=HTMLResponse)
-def main():
-    return FileResponse("frontend/dist/index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"})
+@app.get("/api")
+def api_root():
+    return {"message": "Habit Tracker API is working"}
 
 
 def _save_schedule(db, habit_key, schedule):
@@ -118,7 +112,7 @@ def _get_schedule(db, habit_key):
     return [{"day_of_week": r.day_of_week, "start_time": r.start_time, "end_time": r.end_time} for r in rows]
 
 
-@app.get("/customHabits")
+@app.get("/api/customHabits")
 def get_custom_habits(db: db_dependency):
     habits = db.query(models.CustomHabit).order_by(models.CustomHabit.sort_order).all()
     return [
@@ -127,7 +121,7 @@ def get_custom_habits(db: db_dependency):
     ]
 
 
-@app.post("/customHabits", status_code=status.HTTP_201_CREATED)
+@app.post("/api/customHabits", status_code=status.HTTP_201_CREATED)
 def create_custom_habit(habit: schemas.CustomHabitCreate, db: db_dependency):
     existing = db.query(models.CustomHabit).filter(models.CustomHabit.key == habit.key).first()
     if existing:
@@ -142,7 +136,7 @@ def create_custom_habit(habit: schemas.CustomHabitCreate, db: db_dependency):
     return {"id": new_habit.id, "key": new_habit.key, "label": new_habit.label, "color": new_habit.color, "sort_order": new_habit.sort_order, "schedule": _get_schedule(db, new_habit.key)}
 
 
-@app.put("/customHabits/{habit_id}", status_code=status.HTTP_200_OK)
+@app.put("/api/customHabits/{habit_id}", status_code=status.HTTP_200_OK)
 def update_custom_habit(habit_id: int, habit: schemas.CustomHabitUpdate, db: db_dependency):
     existing = db.query(models.CustomHabit).filter(models.CustomHabit.id == habit_id).first()
     if not existing:
@@ -157,7 +151,7 @@ def update_custom_habit(habit_id: int, habit: schemas.CustomHabitUpdate, db: db_
     return {"id": existing.id, "key": existing.key, "label": existing.label, "color": existing.color, "sort_order": existing.sort_order, "schedule": _get_schedule(db, existing.key)}
 
 
-@app.delete("/customHabits/{habit_id}", status_code=status.HTTP_200_OK)
+@app.delete("/api/customHabits/{habit_id}", status_code=status.HTTP_200_OK)
 def delete_custom_habit(habit_id: int, db: db_dependency):
     existing = db.query(models.CustomHabit).filter(models.CustomHabit.id == habit_id).first()
     if not existing:
@@ -169,7 +163,7 @@ def delete_custom_habit(habit_id: int, db: db_dependency):
     return {"message": f"Deleted custom habit '{existing.label}' and its data."}
 
 
-@app.get("/customHabitData/{habit_date}")
+@app.get("/api/customHabitData/{habit_date}")
 def get_custom_habit_data(habit_date: date, db: db_dependency):
     records = (
         db.query(models.CustomHabitData)
@@ -184,7 +178,7 @@ def get_custom_habit_data(habit_date: date, db: db_dependency):
     return result
 
 
-@app.put("/customHabitData/{habit_date}/{habit_key}", status_code=status.HTTP_200_OK)
+@app.put("/api/customHabitData/{habit_date}/{habit_key}", status_code=status.HTTP_200_OK)
 def update_custom_habit_data(habit_date: date, habit_key: str, body: schemas.CustomHabitDataUpdate, db: db_dependency):
     target_date = datetime.combine(habit_date, time.min)
     existing = (
@@ -206,7 +200,7 @@ def update_custom_habit_data(habit_date: date, habit_key: str, body: schemas.Cus
     return {"date": habit_date.isoformat(), "habit_key": existing.habit_key, "slot_index": existing.slot_index, "completed": existing.completed}
 
 
-@app.get("/customHabitAll")
+@app.get("/api/customHabitAll")
 def get_all_custom_habit_data(db: db_dependency):
     records = db.query(models.CustomHabitData).all()
     result = {}
@@ -220,7 +214,7 @@ def get_all_custom_habit_data(db: db_dependency):
     return result
 
 
-@app.get("/habitStats")
+@app.get("/api/habitStats")
 def get_habit_stats(db: db_dependency):
     rows = (
         db.query(
@@ -240,7 +234,7 @@ def get_habit_stats(db: db_dependency):
     return stats
 
 
-@app.post("/customHabitReason", status_code=status.HTTP_201_CREATED)
+@app.post("/api/customHabitReason", status_code=status.HTTP_201_CREATED)
 def upsert_custom_habit_reason(body: schemas.CustomHabitReasonCreate, db: db_dependency):
     target_date = datetime.combine(body.date, time.min)
     existing = (
@@ -267,7 +261,7 @@ def upsert_custom_habit_reason(body: schemas.CustomHabitReasonCreate, db: db_dep
     return {"date": body.date.isoformat(), "habit_key": existing.habit_key, "slot_index": existing.slot_index, "reason": existing.reason}
 
 
-@app.get("/customHabitReason/{habit_date}")
+@app.get("/api/customHabitReason/{habit_date}")
 def get_custom_habit_reasons(habit_date: date, db: db_dependency):
     records = (
         db.query(models.CustomHabitReason)
@@ -280,7 +274,7 @@ def get_custom_habit_reasons(habit_date: date, db: db_dependency):
     ]
 
 
-@app.get("/customHabitReasonAll")
+@app.get("/api/customHabitReasonAll")
 def get_all_custom_habit_reasons(db: db_dependency):
     records = (
         db.query(models.CustomHabitReason)
@@ -294,4 +288,5 @@ def get_all_custom_habit_reasons(db: db_dependency):
 
 
 if __name__ == "__main__":
-    main()
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
