@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { getTodayIso, getTodayDay } from "./data";
 import {
   fetchCustomHabits, fetchCustomHabitData, fetchHabitStats,
@@ -23,60 +23,54 @@ export default function App() {
   const [customHabits, setCustomHabits] = useState([]);
   const [customData, setCustomData] = useState({});
   const [habitStats, setHabitStats] = useState({});
-  const customLoadedRef = useRef(false);
 
   const [modal, setModal] = useState({ open: false, habitKey: null, habitLabel: "", slotIndex: 0 });
 
+  // The all-time rings read from /habitStats, which is derived server-side from the
+  // rows a toggle writes. It must be refetched *after* the write lands, never in
+  // reaction to local state, or the ring renders the pre-toggle numbers.
+  const refreshStats = useCallback(() => fetchHabitStats().then(setHabitStats), []);
+
+  // Also refreshes the rings: deleting a habit drops its data rows, so the
+  // all-time totals move whenever the habit list does.
   const loadCustomHabits = useCallback(() => {
     fetchCustomHabits().then((habits) => {
       setCustomHabits(habits);
-      fetchCustomHabitData(ISO).then((data) => {
-        setCustomData(data);
-        customLoadedRef.current = true;
-      });
+      fetchCustomHabitData(ISO).then(setCustomData);
     });
-  }, []);
+    refreshStats();
+  }, [refreshStats]);
 
   useEffect(() => { loadCustomHabits(); }, [loadCustomHabits]);
 
-  useEffect(() => {
-    fetchHabitStats().then(setHabitStats);
-  }, []);
-
-  useEffect(() => {
-    if (customLoadedRef.current) {
-      fetchHabitStats().then(setHabitStats);
+  const toggleCustomSlot = useCallback(async (habitKey, slotIndex) => {
+    if ((customData[habitKey] || {})[slotIndex]) {
+      const habit = customHabits.find((h) => h.key === habitKey);
+      setModal({ open: true, habitKey, habitLabel: habit?.label || habitKey, slotIndex });
+      return;
     }
-  }, [customData]);
 
-  const toggleCustomSlot = useCallback((habitKey, slotIndex) => {
-    setCustomData((prev) => {
-      const habitSlots = prev[habitKey] || {};
-      const wasCompleted = habitSlots[slotIndex];
-
-      if (wasCompleted) {
-        const habit = customHabits.find((h) => h.key === habitKey);
-        setModal({ open: true, habitKey, habitLabel: habit?.label || habitKey, slotIndex });
-        return prev;
-      }
-
-      saveCustomHabitData(ISO, habitKey, true, slotIndex);
-      return { ...prev, [habitKey]: { ...habitSlots, [slotIndex]: true } };
-    });
-  }, [customHabits]);
+    setCustomData((prev) => ({
+      ...prev,
+      [habitKey]: { ...prev[habitKey], [slotIndex]: true },
+    }));
+    await saveCustomHabitData(ISO, habitKey, true, slotIndex);
+    await refreshStats();
+  }, [customHabits, customData, refreshStats]);
 
   const handleReasonSubmit = useCallback(async (reason) => {
     const { habitKey, slotIndex } = modal;
-    saveCustomHabitData(ISO, habitKey, false, slotIndex);
+    setCustomData((prev) => ({
+      ...prev,
+      [habitKey]: { ...prev[habitKey], [slotIndex]: false },
+    }));
+    setModal({ open: false, habitKey: null, habitLabel: "", slotIndex: 0 });
+    await saveCustomHabitData(ISO, habitKey, false, slotIndex);
     if (reason.trim()) {
       await saveCustomHabitReason(ISO, habitKey, slotIndex, reason.trim());
     }
-    setCustomData((prev) => {
-      const habitSlots = prev[habitKey] || {};
-      return { ...prev, [habitKey]: { ...habitSlots, [slotIndex]: false } };
-    });
-    setModal({ open: false, habitKey: null, habitLabel: "", slotIndex: 0 });
-  }, [modal]);
+    await refreshStats();
+  }, [modal, refreshStats]);
 
   const todaySchedule = useMemo(() => {
     const slots = [];

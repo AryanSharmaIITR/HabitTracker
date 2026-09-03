@@ -5,11 +5,17 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from datetime import date, datetime, time
 from typing import Annotated
+from pathlib import Path
+import os
 import models
 import schemas
-from database import engine, SessionLocal
+from database import Base, _init_db, SessionLocal
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Integer
+
+DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+_DAY_INDEX = {d: i for i, d in enumerate(DAY_ORDER)}
+
 
 def _seed_today(db: Session):
     today = date.today()
@@ -44,7 +50,9 @@ def _seed_today(db: Session):
 
 @asynccontextmanager
 async def lifespan(app):
-    models.Base.metadata.create_all(bind=engine)
+    _init_db()
+    from database import engine
+    Base.metadata.create_all(bind=engine)
     print("Database tables initialized.")
     db = SessionLocal()
     try:
@@ -63,7 +71,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="react-assets")
+_dist = Path(__file__).parent / "frontend" / "dist"
+if _dist.is_dir():
+    app.mount("/assets", StaticFiles(directory=str(_dist / "assets")), name="react-assets")
 
 
 def get_db():
@@ -86,22 +96,25 @@ def _save_schedule(db, habit_key, schedule):
     db.query(models.CustomHabitSchedule).filter(
         models.CustomHabitSchedule.habit_key == habit_key
     ).delete()
-    for i, item in enumerate(schedule):
+    per_day = {}
+    for item in schedule:
+        order = per_day.get(item.day_of_week, 0)
+        per_day[item.day_of_week] = order + 1
         db.add(models.CustomHabitSchedule(
             habit_key=habit_key,
             day_of_week=item.day_of_week,
             start_time=item.start_time,
             end_time=item.end_time,
-            slot_order=i,
+            slot_order=order,
         ))
 
 def _get_schedule(db, habit_key):
     rows = (
         db.query(models.CustomHabitSchedule)
         .filter(models.CustomHabitSchedule.habit_key == habit_key)
-        .order_by(models.CustomHabitSchedule.day_of_week, models.CustomHabitSchedule.slot_order)
         .all()
     )
+    rows.sort(key=lambda r: (_DAY_INDEX.get(r.day_of_week, len(DAY_ORDER)), r.slot_order))
     return [{"day_of_week": r.day_of_week, "start_time": r.start_time, "end_time": r.end_time} for r in rows]
 
 

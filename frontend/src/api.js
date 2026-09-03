@@ -1,6 +1,8 @@
+const BASE = import.meta.env.VITE_API_URL ?? "";
+
 export async function fetchCustomHabits() {
   try {
-    const res = await fetch("/customHabits");
+    const res = await fetch(`${BASE}/customHabits`);
     if (res.ok) return await res.json();
   } catch {
     console.info("Could not fetch custom habits");
@@ -10,7 +12,7 @@ export async function fetchCustomHabits() {
 
 export async function createCustomHabit(data) {
   try {
-    const res = await fetch("/customHabits", {
+    const res = await fetch(`${BASE}/customHabits`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -24,7 +26,7 @@ export async function createCustomHabit(data) {
 
 export async function updateCustomHabit(id, data) {
   try {
-    const res = await fetch(`/customHabits/${id}`, {
+    const res = await fetch(`${BASE}/customHabits/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -38,7 +40,7 @@ export async function updateCustomHabit(id, data) {
 
 export async function deleteCustomHabit(id) {
   try {
-    const res = await fetch(`/customHabits/${id}`, { method: "DELETE" });
+    const res = await fetch(`${BASE}/customHabits/${id}`, { method: "DELETE" });
     if (res.ok) return await res.json();
   } catch {
     console.info("Could not delete custom habit");
@@ -48,7 +50,7 @@ export async function deleteCustomHabit(id) {
 
 export async function fetchCustomHabitData(iso) {
   try {
-    const res = await fetch(`/customHabitData/${iso}`);
+    const res = await fetch(`${BASE}/customHabitData/${iso}`);
     if (res.ok) return await res.json();
   } catch {
     console.info("Could not fetch custom habit data");
@@ -58,7 +60,7 @@ export async function fetchCustomHabitData(iso) {
 
 export async function saveCustomHabitData(iso, habitKey, completed, slotIndex = 0) {
   try {
-    await fetch(`/customHabitData/${iso}/${habitKey}`, {
+    await fetch(`${BASE}/customHabitData/${iso}/${habitKey}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ completed, slot_index: slotIndex }),
@@ -70,7 +72,7 @@ export async function saveCustomHabitData(iso, habitKey, completed, slotIndex = 
 
 export async function fetchAllCustomHabitData() {
   try {
-    const res = await fetch("/customHabitAll");
+    const res = await fetch(`${BASE}/customHabitAll`);
     if (res.ok) return await res.json();
   } catch {
     console.info("Could not fetch all custom habit data");
@@ -80,7 +82,7 @@ export async function fetchAllCustomHabitData() {
 
 export async function fetchHabitStats() {
   try {
-    const res = await fetch("/habitStats");
+    const res = await fetch(`${BASE}/habitStats`);
     if (res.ok) return await res.json();
   } catch {
     console.info("Could not fetch habit stats");
@@ -90,7 +92,7 @@ export async function fetchHabitStats() {
 
 export async function saveCustomHabitReason(iso, habitKey, slotIndex, reason) {
   try {
-    const res = await fetch("/customHabitReason", {
+    const res = await fetch(`${BASE}/customHabitReason`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ date: iso, habit_key: habitKey, slot_index: slotIndex, reason }),
@@ -104,7 +106,7 @@ export async function saveCustomHabitReason(iso, habitKey, slotIndex, reason) {
 
 export async function fetchAllReasons() {
   try {
-    const res = await fetch("/customHabitReasonAll");
+    const res = await fetch(`${BASE}/customHabitReasonAll`);
     if (res.ok) return await res.json();
   } catch {
     console.info("Could not fetch reasons");
