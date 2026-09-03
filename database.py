@@ -1,13 +1,13 @@
 import os
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.exc import OperationalError
 from pathlib import Path
 from dotenv import load_dotenv
 from sqlalchemy.ext.declarative import declarative_base
 
 load_dotenv(Path(__file__).parent / ".env")
-URL = os.getenv("DATABASE_URL", "")
+
+URL = os.getenv("DB_POSTGRES_URL") or os.getenv("DATABASE_URL", "")
 
 engine = None
 SessionLocal = None
@@ -20,14 +20,3 @@ def _init_db():
         return
     engine = create_engine(URL)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-    try:
-        db_name = URL.rsplit("/", 1)[-1].split("?")[0]
-        server_url = URL.rsplit("/", 1)[0]
-        tmp_engine = create_engine(server_url)
-        with tmp_engine.connect() as conn:
-            conn.execute(text(f"CREATE DATABASE IF NOT EXISTS `{db_name}`"))
-            conn.commit()
-        tmp_engine.dispose()
-    except OperationalError:
-        pass
